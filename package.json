@@ -1,0 +1,19 @@
+{
+  "name": "rabbitmq-github-events",
+  "version": "0.0.1",
+  "description": "",
+  "author": "Steven Inskip",
+  "main": "src/app.js",
+  "scripts": {
+    "start": "NODE_PATH=src node --harmony src/app.js",
+    "dev": "NODE_PATH=src nodemon --harmony src/app.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.15.1",
+    "cors": "^2.7.1",
+    "moment": "^2.13.0",
+    "restify": "^4.1.0",
+    "rx": "^4.1.0",
+    "rx-node": "^1.0.2"
+  }
+}

@@ -11,7 +11,10 @@ const moment = require('moment');
 const restify = require('restify');
 const config = require('./config');
 
-const app = restify.createServer();
+const app = restify.createServer({
+  name: config.SERVICE_NAME
+});
+
 app.use(bodyParser.json({ limit: '50mb' }));
 
 // Init rabbitmq connection and channel

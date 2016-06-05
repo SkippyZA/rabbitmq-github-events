@@ -6,14 +6,29 @@
  */
 const rx = require('rx');
 const R = require('ramda');
+const os = require('os');
 const RxAmqplib = require('rx-amqplib');
 const bodyParser = require('body-parser');
 const moment = require('moment');
 const restify = require('restify');
+const bunyan = require('bunyan');
 const config = require('./config');
 
+// Create logger instance
+const logger = bunyan.createLogger({
+  name: config.SERVICE_NAME,
+  streams: [
+    {
+      stream: process.stdout,
+      level: 'debug'
+    }
+  ]
+});
+
+// create restify server
 const app = restify.createServer({
-  name: config.SERVICE_NAME
+  name: config.SERVICE_NAME,
+  log: logger
 });
 
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -22,14 +37,14 @@ app.use(bodyParser.json({ limit: '50mb' }));
 const amqpConnection$ = RxAmqplib.newConnection(config.RABBITMQ_HOST);
 const channel$ = amqpConnection$
   .flatMap(R.invoker(0, 'createChannel'))
-  .doOnNext(() => console.log('Created new rabbitmq channel'));
+  .doOnNext(() => logger.info('Created new rabbitmq channel'));
 
 // Assert a direct routing exchange on rabbitmq
 const exchange$ = channel$
   .flatMap(channel => channel
     .assertExchange(config.RABBITMQ_EXCHANGE, config.RABBITMQ_EXCHANGE_TYPE, { durable: false }))
-  .doOnNext(() => console
-    .log({ exchange: config.RABBITMQ_EXCHANGE, exchange_type: config.RABBITMQ_EXCHANGE_TYPE }, 'Asserted exchange'))
+  .doOnNext(() => logger
+    .info({ exchange: config.RABBITMQ_EXCHANGE, exchange_type: config.RABBITMQ_EXCHANGE_TYPE }, 'Asserted exchange'))
   .shareReplay();
 
 // time => ISO date string
@@ -58,7 +73,7 @@ const evolvePushRequest = R.evolve({
 
 /**
  * Endpoint for github to push webhook events to.
- * 
+ *
  * Route: POST -> /github/events
  */
 app.post('/github/events', function (req, res) {
@@ -91,6 +106,6 @@ app.post('/github/events', function (req, res) {
  * Start the server
  */
 app.listen(config.PORT, () => {
-  console.log('Express server listening on port ' + config.PORT);
+  logger.info(config, config.SERVICE_NAME + ' service started');
 });
 

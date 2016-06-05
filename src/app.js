@@ -1,7 +1,8 @@
 'use strict';
 
 /**
- * Microservice to fix the repository created_at and pushed_at timestamps from the github push webhook
+ * Microservice to fix the repository created_at and pushed_at timestamps from the github push webhook and push them
+ * to a RabbitMQ exchange
  */
 const rx = require('rx');
 const R = require('ramda');
@@ -55,6 +56,11 @@ const evolvePushRequest = R.evolve({
 });
 
 
+/**
+ * Endpoint for github to push webhook events to.
+ * 
+ * Route: POST -> /github/events
+ */
 app.post('/github/events', function (req, res) {
   // Request stream
   const req$ = rx.Observable.just(req).map(R.pick(['headers', 'body']));
@@ -70,10 +76,10 @@ app.post('/github/events', function (req, res) {
 
   // All Github events
   const events$ = rx.Observable.merge(pushEvent$, eventsWithoutPush$)
-    .doOnNext(event => 
+    .doOnNext(event =>
       exchange$
         .doOnNext(reply => reply.channel
-        .publish(config.RABBITMQ_EXCHANGE, githubEventType(event), new Buffer(JSON.stringify(event))))
+          .publish(config.RABBITMQ_EXCHANGE, githubEventType(event), new Buffer(JSON.stringify(event))))
         .subscribe()
     );
 

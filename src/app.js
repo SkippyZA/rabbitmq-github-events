@@ -43,7 +43,15 @@ app.pre((request, response, next) => {
 app.use(bodyParser.json({ limit: '50mb' }));
 
 // Init rabbitmq connection and channel
-const amqpConnection$ = RxAmqplib.newConnection(config.RABBITMQ_HOST);
+const amqpConnection$ = RxAmqplib.newConnection({
+  protocol: config.RABBITMQ_PROTOCOL,
+  hostname: config.RABBITMQ_HOST,
+  port: config.RABBITMQ_PORT,
+  username: config.RABBITMQ_USERNAME,
+  password: config.RABBITMQ_PASSWORD,
+  vhost: config.RABBITMQ_VHOST
+});
+
 const channel$ = amqpConnection$
   .flatMap(R.invoker(0, 'createChannel'))
   .doOnNext(() => logger.info('Created new rabbitmq channel'));

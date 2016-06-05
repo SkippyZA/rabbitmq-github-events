@@ -116,7 +116,10 @@ app.post('/github/events', function (req, res) {
       exchange$
         .doOnNext(reply => reply.channel
           .publish(config.RABBITMQ_EXCHANGE, githubEventType(event), new Buffer(JSON.stringify(event))))
-        .subscribe(() => {}, error => logger.error({ error: error }, 'Error publishing message to exchange'))
+        .subscribe(
+          () => logger.debug('Sent message to rabbitmq exchange'), 
+          error => logger.error({ error: error }, 'Error publishing message to exchange')
+        )
     );
 
   // Send an OK response if all went well

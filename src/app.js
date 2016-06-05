@@ -6,29 +6,38 @@
  */
 const rx = require('rx');
 const R = require('ramda');
-const os = require('os');
 const RxAmqplib = require('rx-amqplib');
 const bodyParser = require('body-parser');
 const moment = require('moment');
-const restify = require('restify');
-const bunyan = require('bunyan');
+const Restify = require('restify');
+const Bunyan = require('bunyan');
 const config = require('./config');
 
 // Create logger instance
-const logger = bunyan.createLogger({
+const logger = Bunyan.createLogger({
   name: config.SERVICE_NAME,
   streams: [
     {
       stream: process.stdout,
-      level: 'debug'
+      level: config.LOG_LEVEL
     }
-  ]
+  ],
+  serializers: {
+    err: Bunyan.stdSerializers.err,
+    req: Bunyan.stdSerializers.req,
+    res: Bunyan.stdSerializers.res
+  }
 });
 
-// create restify server
-const app = restify.createServer({
+// create Restify server
+const app = Restify.createServer({
   name: config.SERVICE_NAME,
   log: logger
+});
+
+app.pre((request, response, next) => {
+  request.log.info({ req: request }, 'Incoming HTTP request');
+  return next();
 });
 
 app.use(bodyParser.json({ limit: '50mb' }));
@@ -44,7 +53,11 @@ const exchange$ = channel$
   .flatMap(channel => channel
     .assertExchange(config.RABBITMQ_EXCHANGE, config.RABBITMQ_EXCHANGE_TYPE, { durable: false }))
   .doOnNext(() => logger
-    .info({ exchange: config.RABBITMQ_EXCHANGE, exchange_type: config.RABBITMQ_EXCHANGE_TYPE }, 'Asserted exchange'))
+    .info({
+      exchange: config.RABBITMQ_EXCHANGE,
+      exchange_type: config.RABBITMQ_EXCHANGE_TYPE,
+      vhost: config.RABBITMQ_VHOST
+    }, 'Asserted exchange'))
   .shareReplay();
 
 // time => ISO date string
@@ -99,7 +112,10 @@ app.post('/github/events', function (req, res) {
     );
 
   // Send an OK response if all went well
-  events$.subscribe(() => res.send('OK!'), err => res.status(400).send(err.message));
+  events$.subscribe(() => res.send('OK!'), err => {
+    res.log.error({ err: err }, 'Error while processing Github webhook event');
+    res.status(400).send(err.message)
+  });
 });
 
 /**

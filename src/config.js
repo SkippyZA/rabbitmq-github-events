@@ -1,6 +1,7 @@
 module.exports = {
   SERVICE_NAME: process.env.SERVICE_NAME || 'rabbitmq-github-events',
   PORT: process.env.PORT || 8080,
+  LOG_LEVEL: process.env.LOG_LEVEL || 'info',
 
   RABBITMQ_EXCHANGE_TYPE: 'direct',
   RABBITMQ_EXCHANGE: process.env.RABBITMQ_EXCHANGE || 'github-events',
